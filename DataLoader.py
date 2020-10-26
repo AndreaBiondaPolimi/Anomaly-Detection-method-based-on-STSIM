@@ -22,21 +22,37 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
                 #print (i,j)
                 cropped.append(im1[(j*stride):(j*stride)+patch_size, (i*stride):(i*stride)+patch_size])
 
-
     return cropped
+
+
+def load_patches_from_file_fixed (file, patch_size, positions):
+    im1 = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+
+    patches = []
+    for pos in positions:
+        patches.append (im1[pos[0]:pos[0]+patch_size, pos[1]:pos[1]+patch_size])
+
+    return patches
 
 
 def load_patches (folder, patch_size, random=True, n_patches=3, stride=32, cut_size=None):
     patches = []
-
     for file in os.listdir(folder):
         if file.endswith(".bmp") or file.endswith(".tif"):
             ret = load_patches_from_file(os.path.join(folder, file), patch_size, random, n_patches, stride, cut_size)
             for r in ret:
                 patches.append(r)
-
     return patches
 
 
+def show_patches (patches):
+    for img in patches:
+        plt.imshow(img)
+        plt.show()
+
+
 if __name__ == "__main__":
-    load_patches('CUReT_Data')
+    valid_patches = load_patches_from_file_fixed('Dataset\\SEM_Data\\Anomalous\\images\\ITIA1108.tif', patch_size=64, 
+        positions = ((11,468),(131,365),(328,848))) 
+
+    show_patches(valid_patches)
