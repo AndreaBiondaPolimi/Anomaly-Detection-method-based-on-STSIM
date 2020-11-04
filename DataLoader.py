@@ -15,7 +15,8 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
         for _ in range (n_patches):
             j = np.random.randint(0, im1.shape[0] - patch_size)
             i = np.random.randint(0, im1.shape[1] - patch_size)
-            cropped.append(im1[j:j+patch_size, i:i+patch_size])
+            if (check_preprocessing(im1[j:j+patch_size, i:i+patch_size])):
+                cropped.append(im1[j:j+patch_size, i:i+patch_size])
     else:
         for j in range (int((im1.shape[0] - patch_size) / stride) + 1):
             for i in range (int((im1.shape[1] - patch_size) / stride) + 1):
@@ -27,11 +28,9 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
 
 def load_patches_from_file_fixed (file, patch_size, positions):
     im1 = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-
     patches = []
     for pos in positions:
         patches.append (im1[pos[0]:pos[0]+patch_size, pos[1]:pos[1]+patch_size])
-
     return patches
 
 
@@ -44,11 +43,19 @@ def load_patches (folder, patch_size, random=True, n_patches=3, stride=32, cut_s
                 patches.append(r)
     return patches
 
+def load_gt_from_file (file, cut_size=None):
+    im1 = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+    if (cut_size is not None):
+        im1 = im1[0:cut_size[0], 0:cut_size[1]]
+    return im1/255
 
 def show_patches (patches):
     for img in patches:
         plt.imshow(img)
         plt.show()
+
+def check_preprocessing (patch):
+    return True if np.median(patch) > 100 else False
 
 
 if __name__ == "__main__":

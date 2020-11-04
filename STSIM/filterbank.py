@@ -35,12 +35,13 @@ def visualize(coeff, normalize = True):
 
 	return out
 
+#h=5 , n=5 sutied for P=128x128 (Metric test)
 class Steerable:
-	def __init__(self, height = 5):
+	def __init__(self, height = 5, nbands=5):
 		"""
 		height is the total height, including highpass and lowpass
 		"""
-		self.nbands = 5
+		self.nbands = nbands
 		self.height = height
 		self.isSample = True
 

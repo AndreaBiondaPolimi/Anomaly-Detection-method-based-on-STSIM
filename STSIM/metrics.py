@@ -112,8 +112,8 @@ class Metric:
 
         return np.mean(stsim2)
             
-    def STSIM_M(self, im): 
-        ss = Steerable(5)
+    def STSIM_M(self, im, height=5, nbands=5): 
+        ss = Steerable(height, nbands)
         M, N = im.shape
         coeff = ss.buildSCFpyr(im)
 
@@ -143,6 +143,10 @@ class Metric:
                 s1 = cv2.resize(s1, (0,0), fx = 0.5, fy = 0.5)
                 f.append((s1*s2).mean()/np.sqrt(s1.var())/np.sqrt(s2.var()))
         return np.array(f)
+
+
+
+
 
     def pooling(self, im1, im2):
         win = self.win
