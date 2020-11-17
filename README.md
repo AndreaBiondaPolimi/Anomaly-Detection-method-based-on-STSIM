@@ -5,7 +5,7 @@
 1. Outlier implementations
     - [ ] Strong Mahalanobis
     - [X] KDE implementation
-    - [ ] IFOR implementation
+    - [X] IFOR implementation
 
 2. Other implementations
     - [X] Preprocessing (remove low median patches)
@@ -16,3 +16,4 @@
     - [ ] LogLielihood
     - [ ] STSIM
     - [ ] KDE
+    - [ ] IFOR

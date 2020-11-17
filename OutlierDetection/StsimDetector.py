@@ -10,9 +10,9 @@ class StsimDetector (OutlierDetector):
 
     def calculate_statistics (self):
         self.mean = np.mean(self.data_train, 0)
-        self.var = np.var (self.data_train, 0)
+        self.var = np.var (self.data_train - self.mean, 0)
 
-    def calculate_acceptances (self, alpha = 0.995):
+    def calculate_acceptances (self, alpha = 0.98):
         normal_scores = []
         for dt in self.data_train:
             normal_scores.append(self.calculate_distance(dt))
@@ -20,8 +20,14 @@ class StsimDetector (OutlierDetector):
         self.treshold = self.calculate_quantile(np.array(normal_scores), alpha)
         
 
-    def calculate_distance (self, f_valid):
+    def calculate_distance (self, f_valid, prints=False):
         dists = (f_valid - self.mean) ** 2
+        arr = dists/self.var
+        if (prints):
+            np.set_printoptions(precision=4)
+            print (np.argsort(arr)[25:])
+            print (np.sort(arr)[25:])
+
         s = np.sum(dists/self.var)
         return np.sqrt(s)
 

@@ -13,7 +13,7 @@ class KdeDetector (OutlierDetector):
         self.split = int(self.data_train.shape[0] * 0.8)
         self.kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(self.data_train[:self.split,:])
 
-    def calculate_acceptances (self, alpha = 0.995):
+    def calculate_acceptances (self, alpha):
         normal_scores = self.kde.score_samples(self.data_train[self.split:,:])
         self.normal_score = np.mean(np.array(normal_scores))
         self.treshold = self.calculate_quantile(normal_scores, 1. - alpha)
@@ -25,9 +25,11 @@ class KdeDetector (OutlierDetector):
 
     def get_density_tresholded (self, density, binarize=True):
         if (not binarize):
+            #print (self.treshold)
             density[density <= self.treshold] = self.treshold
             density = density * -1 
-            density = (density - np.min(density)) / (np.max(density) - np.min(density))
+            if (np.max(density) - np.min(density) > 0):
+                density = (density - np.min(density)) / (np.max(density) - np.min(density))
         else:
             density[density <= self.treshold] = 1
             density[density > self.treshold] = 0

@@ -8,7 +8,7 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
     im1 = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
 
     if (cut_size is not None):
-        im1 = im1[cut_size[0]:cut_size[1], cut_size[2]:cut_size[3]]
+        im1 = im1[0:cut_size[0], 0:cut_size[1]]
 
     cropped = []
     if (random == True):
@@ -23,7 +23,7 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
                 #print (i,j)
                 cropped.append(im1[(j*stride):(j*stride)+patch_size, (i*stride):(i*stride)+patch_size])
 
-    return cropped
+    return cropped, im1
 
 
 def load_patches_from_file_fixed (file, patch_size, positions):
@@ -38,7 +38,7 @@ def load_patches (folder, patch_size, random=True, n_patches=3, stride=32, cut_s
     patches = []
     for file in os.listdir(folder):
         if file.endswith(".bmp") or file.endswith(".tif"):
-            ret = load_patches_from_file(os.path.join(folder, file), patch_size, random, n_patches, stride, cut_size)
+            ret, img = load_patches_from_file(os.path.join(folder, file), patch_size, random, n_patches, stride, cut_size)
             for r in ret:
                 patches.append(r)
     return patches
@@ -56,6 +56,7 @@ def show_patches (patches):
 
 def check_preprocessing (patch):
     return True if np.median(patch) > 100 else False
+    #return True if np.median(patch) > 80 else False
 
 
 if __name__ == "__main__":

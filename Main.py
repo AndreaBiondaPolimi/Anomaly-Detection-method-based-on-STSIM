@@ -4,31 +4,29 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-train_patch_size = 48
-
-valid_patch_size = 48
+train_patch_size = 32
+valid_patch_size = 32
 stride = 8
 
 
 if __name__ == "__main__":
 
-    train_patches = load_patches('Dataset\\SEM_Data\\Normal', patch_size=train_patch_size, random=True, n_patches=200)
+    train_patches = load_patches('Dataset\\SEM_Data\\Normal', patch_size=train_patch_size, random=True, n_patches=40)
 
-    valid_patches = load_patches_from_file('Dataset\\SEM_Data\\Anomalous\\images\\ITIA1107.tif', patch_size=valid_patch_size, 
-        random=False, stride=stride) 
-    valid_gt = load_gt_from_file ('Dataset\\SEM_Data\\Anomalous\\gt\\ITIA1107_gt.png', (672,1024))
+    valid_patches, valid_img = load_patches_from_file('Dataset\\SEM_Data\\Anomalous\\images\\ITIA1112.tif', patch_size=valid_patch_size, 
+        random=False, stride=stride, cut_size=(672,1024)) 
+    valid_gt = load_gt_from_file ('Dataset\\SEM_Data\\Anomalous\\gt\\ITIA1112_gt.png', (672,1024))
 
 
-    #model = Model('stsim', 'mahalanobis')
+    #model = Model('stsim', 'mahalanobis', height=3, orientations=4)
     #model = Model('stsim', 'stsim')
     #model = Model('stsim', 'loglikelihood')
-    model = Model('stsim', 'kde')
+    model = Model('stsim', 'kde', height=3, orientations=4)
+    #model = Model('stsim', 'ifor', height=3, orientations=4)
+    
     model.model_create(train_patches)
 
+    model.model_evaluate(valid_patches, (672,1024), stride, valid_patch_size, valid_gt)
 
-    density = model.get_distance_density_from_model (valid_patches, density_shape=(672,1024), stride=stride, patch_size=valid_patch_size)
-    print (model.iou_coef(valid_gt, density))
-    plt.imshow(density)
-    plt.show()
-
+    #model.model_visualize (valid_patches, (672,1024), stride, valid_patch_size, valid_gt, valid_img, alpha=0.965)
 

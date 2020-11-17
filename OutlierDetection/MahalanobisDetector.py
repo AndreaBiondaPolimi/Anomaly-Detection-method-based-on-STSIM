@@ -14,7 +14,7 @@ class MahalanobisDetector (StsimDetector):
         self.cov = np.cov(self.data_train.T)
         self.cov_i = np.linalg.inv(self.cov)
 
-    def calculate_acceptances (self, alpha = 0.995):
+    def calculate_acceptances (self, alpha = 0.98):
         super().calculate_acceptances(alpha)
 
     def calculate_distance (self, f_valid):

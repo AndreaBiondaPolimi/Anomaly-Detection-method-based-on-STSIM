@@ -4,6 +4,7 @@ from STSIM.filterbank import Steerable, SteerableNoSub
 import cv2
 from scipy import signal
 import itertools
+import matplotlib.pyplot as plt
 
 def MSE(img1, img2):
     return ((img2 - img1)**2).mean()
@@ -61,6 +62,7 @@ class Metric:
         # return cv2.filter2D(a, -1, b, anchor = (0,0))\
         # 	[:(a.shape[0]-b.shape[0]+1), :(a.shape[1]-b.shape[1]+1)]
 
+    
     def STSIM(self, im1, im2):
         assert im1.shape == im2.shape
         s = Steerable()
@@ -111,12 +113,13 @@ class Metric:
                     stsim2.append(self.compute_cross_term(im11, im13, im21, im23).mean())
 
         return np.mean(stsim2)
-            
+    
+
     def STSIM_M(self, im, height=5, nbands=5): 
         ss = Steerable(height, nbands)
         M, N = im.shape
         coeff = ss.buildSCFpyr(im)
-
+        
         f = []   
         # single subband statistics
         for s in ss.getlist(coeff):
@@ -142,9 +145,63 @@ class Metric:
 
                 s1 = cv2.resize(s1, (0,0), fx = 0.5, fy = 0.5)
                 f.append((s1*s2).mean()/np.sqrt(s1.var())/np.sqrt(s2.var()))
+        
         return np.array(f)
 
 
+    def visualize (self, im, height=5, nbands=5): 
+        ss = Steerable(height, nbands)
+        M, N = im.shape
+        coeff = ss.buildSCFpyr(im)
+        
+        plt.imshow(im)
+        plt.title("Original")
+        plt.show()
+
+        i = 0
+        # single subband statistics
+        for s in ss.getlist(coeff):
+            s = s.real
+            
+            plt.imshow(s)
+            plt.title("Subband basic " + str(i) + "-" + str(i+4))
+            plt.show()
+
+            i=i+4
+
+        
+        # correlation statistics
+        # across orientations
+        for orients in coeff[1:-1]:
+            for (s1, s2) in list(itertools.combinations(orients, 2)):
+                f = plt.figure()
+                f.add_subplot(1,2, 1)
+                plt.imshow(s1.real)
+                f.add_subplot(1,2, 2)
+                plt.imshow(s2.real)
+                plt.title("Subband cross orientations " + str(i))
+                plt.show()
+
+                i=i+1
+
+        
+        for orient in range(len(coeff[1])):
+            for height in range(len(coeff) - 3):
+                s1 = coeff[height + 1][orient].real
+                s2 = coeff[height + 2][orient].real
+                s1 = cv2.resize(s1, (0,0), fx = 0.5, fy = 0.5)
+
+                f = plt.figure()
+                f.add_subplot(1,2, 1)
+                plt.imshow(s1.real)
+                f.add_subplot(1,2, 2)
+                plt.imshow(s2.real)
+                plt.title("Subband cross heigth  " + str(i))
+                plt.show()
+
+                i=i+1
+        
+        
 
 
 
