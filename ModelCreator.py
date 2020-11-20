@@ -1,17 +1,22 @@
-from STSIM.metrics import Metric
-from DataLoader import load_patches
 import cv2
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
+from multiprocessing import Pool
+from scipy import integrate 
+
+from STSIM.metrics import Metric
+from DataLoader import load_patches
 from OutlierDetection.MahalanobisDetector import MahalanobisDetector
 from OutlierDetection.StsimDetector import StsimDetector
 from OutlierDetection.LogLikelihoodDetector import LogLikelihoodDetector
 from OutlierDetection.KdeDetector import KdeDetector
 from OutlierDetection.IForDetector import IForDetector
 from DataLoader import check_preprocessing
-from scipy import integrate 
 
+import warnings
+warnings.filterwarnings('error')
 #Best H=3,O=4
 
 class Model():
@@ -122,15 +127,28 @@ class Model():
     ### Database Creation ###
     def create_stsim_db(self, patches):
         m = Metric()
-        flags = []
-        database = []
+        flags = [None] * len(patches)
+        database = [None]  * len(patches)
+
+        args = [{'model': copy.deepcopy(m), 'patch_idx': idx, 'patch_value': copy.deepcopy(patches[idx]),
+                    'height': self.height, 'orientations': self.orientations} for idx in range(len(patches))] 
+
+        with Pool(processes=10) as pool:  # multiprocessing.cpu_count()
+            results = pool.map(extract_features, args, chunksize=1)
+
+        for result in results:
+            idx = result['patch_idx']
+            database [idx] = result['features']
+            flags [idx] = result['flag']
 
         #creation of the feature vectores
-        for i in range(0,len(patches)):
-            database.append(m.STSIM_M(patches[i], self.height, self.orientations))
-            flags.append(check_preprocessing(patches[i]))
+        #for i in range(0,len(patches)):
+            #database.append(m.STSIM_M(patches[i], self.height, self.orientations))
+            #flags.append(check_preprocessing(patches[i]))
         
         return np.array(database), np.array(flags)
+
+
 
     ### Detector Assignment ###
     def assign_detector (self, detector_type, database):
@@ -190,3 +208,18 @@ class Model():
 
         f.text(.5, .05, txt, ha='center')
         plt.show()
+
+
+
+
+def extract_features(args):
+    model = args['model']
+    idx = args['patch_idx']
+    patch = args['patch_value']
+    height = args['height']
+    orientations = args['orientations']
+
+    features = model.STSIM_M(patch, height, orientations)
+    flag = check_preprocessing(patch)
+
+    return {'patch_idx':idx, 'features': features, 'flag': flag}
