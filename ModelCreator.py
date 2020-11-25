@@ -6,7 +6,8 @@ import scipy as sp
 from multiprocessing import Pool
 from scipy import integrate 
 
-from STSIM.metrics import Metric
+from STSIM.Numpy.metrics import Metric as Metric_NP
+from STSIM.Tensorflow.metrics_TF import Metric as Metric_TF
 from DataLoader import load_patches
 from OutlierDetection.MahalanobisDetector import MahalanobisDetector
 from OutlierDetection.StsimDetector import StsimDetector
@@ -20,7 +21,9 @@ warnings.filterwarnings('error')
 #Best H=3,O=4
 
 class Model():
-    def __init__(self, indictator, distance, height=3, orientations=4):
+    def __init__(self, indictator, distance, height=3, orientations=4, mode='tf'):
+        self.Metric = Metric_TF if mode == 'tf' else Metric_NP 
+        self.mode = mode
         self.indicator = indictator
         self.distance = distance
         self.height = height
@@ -126,25 +129,40 @@ class Model():
 
     ### Database Creation ###
     def create_stsim_db(self, patches):
-        m = Metric()
+        m = self.Metric()
         flags = [None] * len(patches)
-        database = [None]  * len(patches)
+        
+        if (self.mode == 'tf'):
+            database = None
 
-        args = [{'model': copy.deepcopy(m), 'patch_idx': idx, 'patch_value': copy.deepcopy(patches[idx]),
-                    'height': self.height, 'orientations': self.orientations} for idx in range(len(patches))] 
+            max_batch_size = 10000 #Does not fit whole in memory
+            if (len(patches) > max_batch_size): 
+                for i in range(int(len(patches) / max_batch_size) + 1):
+                    batch_patch = patches[i*max_batch_size : min(((i+1) * max_batch_size), len(patches)) ]
+                    if database is None:
+                        database = m.STSIM_M(batch_patch, self.height, self.orientations)
+                    else:
+                        database = np.concatenate((database, m.STSIM_M(batch_patch, self.height, self.orientations)))
+            else:
+                database = m.STSIM_M(patches, self.height, self.orientations)
+                    
+            #Damn flag, move to another point!
+            for i in range(len(patches)):
+                flags[i] = check_preprocessing(patches[i])
 
-        with Pool(processes=10) as pool:  # multiprocessing.cpu_count()
-            results = pool.map(extract_features, args, chunksize=1)
+        else:    
+            database = [None]  * len(patches)
 
-        for result in results:
-            idx = result['patch_idx']
-            database [idx] = result['features']
-            flags [idx] = result['flag']
+            args = [{'model': copy.deepcopy(m), 'patch_idx': idx, 'patch_value': copy.deepcopy(patches[idx]),
+                        'height': self.height, 'orientations': self.orientations} for idx in range(len(patches))] 
 
-        #creation of the feature vectores
-        #for i in range(0,len(patches)):
-            #database.append(m.STSIM_M(patches[i], self.height, self.orientations))
-            #flags.append(check_preprocessing(patches[i]))
+            with Pool(processes=5) as pool:  # multiprocessing.cpu_count()
+                results = pool.map(extract_features, args, chunksize=1)
+
+            for result in results:
+                idx = result['patch_idx']
+                database [idx] = result['features']
+                flags [idx] = result['flag']
         
         return np.array(database), np.array(flags)
 
@@ -168,11 +186,6 @@ class Model():
 
 
     ### Visualization ###
-    def visualize_subbands (self, patches):
-        m = Metric()
-        for i in range(0,len(patches)):
-            m.visualize(patches[i], self.height, self.orientations)
-
     def model_visualize (self, valid_patches, density_shape, stride, patch_size, valid_gt, valid_img, alpha):
         model_density = self.get_distance_density_from_model(valid_patches, density_shape, stride, patch_size, False)
         self.detector.calculate_acceptances(alpha)
@@ -209,6 +222,12 @@ class Model():
         f.text(.5, .05, txt, ha='center')
         plt.show()
 
+        """
+    def visualize_subbands (self, patches):
+        m = self.Metric()
+        for i in range(0,len(patches)):
+            m.visualize(patches[i], self.height, self.orientations)
+        """
 
 
 

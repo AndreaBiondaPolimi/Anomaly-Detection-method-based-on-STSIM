@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from STSIM.filterbank import Steerable, SteerableNoSub
+from STSIM.Numpy.filterbank import Steerable, SteerableNoSub
 import cv2
 from scipy import signal
 import itertools
@@ -137,6 +137,7 @@ class Metric:
         for orients in coeff[1:-1]:
             for (s1, s2) in list(itertools.combinations(orients, 2)):
                 f.append((s1.real*s2.real).mean())
+                #f.append((s1.real*s2.real).mean()/np.sqrt(s1.var())/np.sqrt(s2.var()))
 
         for orient in range(len(coeff[1])):
             for height in range(len(coeff) - 3):

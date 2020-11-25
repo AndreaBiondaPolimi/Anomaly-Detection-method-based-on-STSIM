@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 
 train_patch_size = 32
 valid_patch_size = 32
-stride = 4
+stride = 2
 
 
 if __name__ == "__main__":
 
-    train_patches = load_patches('Dataset\\SEM_Data\\Normal', patch_size=train_patch_size, random=True, n_patches=400)
+    train_patches = load_patches('Dataset\\SEM_Data\\Normal', patch_size=train_patch_size, random=True, n_patches=500)
 
     valid_patches, valid_img = load_patches_from_file('Dataset\\SEM_Data\\Anomalous\\images\\ITIA1106.tif', patch_size=valid_patch_size, 
-        random=False, stride=stride, cut_size=(672,1024)) 
-    valid_gt = load_gt_from_file ('Dataset\\SEM_Data\\Anomalous\\gt\\ITIA1106_gt.png', (672,1024))
+        random=False, stride=stride, cut_size=(0,672,0,1024)) 
+    valid_gt = load_gt_from_file ('Dataset\\SEM_Data\\Anomalous\\gt\\ITIA1106_gt.png', (0,672,0,1024))
 
 
     #model = Model('stsim', 'mahalanobis', height=3, orientations=4)
