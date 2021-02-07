@@ -15,6 +15,7 @@ from OutlierDetection.LogLikelihoodDetector import LogLikelihoodDetector
 from OutlierDetection.KdeDetector import KdeDetector
 from OutlierDetection.IForDetector import IForDetector
 from DataLoader import check_preprocessing
+from Utils import visualize_results, get_performance, get_roc, get_ovr_iou
 
 import warnings
 warnings.filterwarnings('error')
@@ -46,85 +47,74 @@ class Model():
             self.detector.calculate_statistics()
             self.detector.calculate_acceptances(alpha)
 
-        print (self.database.shape)
 
 
-
-    def get_distance_density_from_model (self, valid_patches, density_shape, stride, patch_size, tresholded=True):
-        h,w = density_shape
-        density = np.zeros(shape=(density_shape))
-        normalizator = np.zeros(shape=(density_shape))
-
+    def get_distance_density_from_model (self, valid_patches, density_shape, stride, patch_size):
         model_valid = Model('stsim', None, self.height, self.orientations)
         model_valid.model_create(valid_patches)
         valid_db = model_valid.database
         valid_flags = model_valid.database_flags
 
+        valid_db = self.detector.calculate_distance(np.array(valid_db))
 
-        for j in range (int((h - patch_size) / stride) + 1):
-            for i in range (int((w - patch_size) / stride) + 1):
-                if (valid_flags[j*int((w - patch_size) / stride + 1) + i]):
-                    f_valid = valid_db [j*int((w - patch_size) / stride + 1) + i] 
-                    dens_val = self.detector.calculate_distance(f_valid)
-                    density[(j*stride):(j*stride)+patch_size, (i*stride):(i*stride)+patch_size] += dens_val
-                else:
-                    density[(j*stride):(j*stride)+patch_size, (i*stride):(i*stride)+patch_size] += self.detector.normal_score
-                normalizator[(j*stride):(j*stride)+patch_size, (i*stride):(i*stride)+patch_size] += 1
-
-        density = density / normalizator
-        if (tresholded):
-            density = self.detector.get_density_tresholded(density, False)
+        density = self.image_reconstruction(valid_db, valid_flags, density_shape, patch_size, stride)
 
         return density
 
 
     ### Performance Evaluation ###
-    def model_evaluate (self, valid_patches, density_shape, stride, patch_size, valid_gt):
-        tprs = []
-        fprs = []
-        model_density = self.get_distance_density_from_model(valid_patches, density_shape, stride, patch_size, False)
+    def model_evaluate (self, valid_patches, density_shape, stride, patch_size, valid_gt, valid_img, ovr_threshold, step):
+        tprs = []; fprs = []#; ious = []; ovrs = []    
+        model_density = self.get_distance_density_from_model(valid_patches, density_shape, stride, patch_size)
 
-        for alpha in np.arange (0.1, 1.0, 0.005):
+        for alpha in np.arange (0.1, 1.0, step):
             self.detector.calculate_acceptances(alpha)
-            density = self.detector.get_density_tresholded(np.copy(model_density), False)
-            _ , tpr, fpr = self.get_performance (valid_gt, density)
-            tprs.append (tpr)
-            fprs.append (fpr)
-        tprs.append(0); fprs.append(0)
+            _ , density_tresholded = self.detector.get_density_tresholded(np.copy(model_density), False)
+            tpr, fpr = get_roc(valid_gt, density_tresholded)
+            tprs.append (tpr); fprs.append (fpr)
         
-        print ("auc: " + str(-1 * integrate.trapz(np.array(tprs), np.array(fprs))))
-        plt.xlabel('FPR')
-        plt.ylabel('TPR')
-        plt.plot (np.array(fprs), np.array(tprs))
-        plt.show()
+        #Calculate evaluations
+        tprs = np.array(tprs); fprs = np.array(fprs) 
 
-    def get_performance (self, y_true, y_pred):
-        y_true = np.array (y_true, dtype=int)
-        y_pred = np.array (y_pred, dtype=int)
+        ovr = None; iou=None
+        if (ovr_threshold is not None):
+            self.detector.calculate_acceptances(ovr_threshold)
+            density, density_tresholded = self.detector.get_density_tresholded(np.copy(model_density), False)
+            _, fpr = get_roc (valid_gt, density_tresholded)
+            ovr, iou = get_ovr_iou(valid_gt, density_tresholded)
 
-        iou = self.iou_coef(y_true, y_pred)
-        tpr, fpr = self.roc_coef (y_true, y_pred)
-        return iou, tpr, fpr
+            print ("FPR:", fpr)
+            print ("OVR", ovr)
+            print ("IoU:", iou)
+            print ("Auc: ", (-1 * integrate.trapz(np.array(tprs), np.array(fprs))))
 
-    def iou_coef(self, y_true, y_pred):
-        intersection = np.logical_and(y_true,y_pred) # Logical AND
-        union = np.logical_or(y_true,y_pred)    # Logical OR
-        IOU = float(np.sum(intersection)/np.sum(union))
-        return IOU
+            #Print residual & score map
+            #visualize_results(valid_img/255, density, "Residual Map")
+            #visualize_results(valid_gt, density_tresholded, "Score Map")
 
-    def roc_coef (self, y_true, y_pred):
-        tp = np.sum (y_true*y_pred)
-        fn = np.sum ((y_true - y_pred).clip(min=0))
-        tpr = tp / (tp + fn)
-
-        fp = np.sum ((y_pred - y_true).clip(min=0))
-        tn = np.sum ((1-y_true)*(1-y_pred))
-        fpr = fp / (fp + tn)
-
-        return tpr, fpr
+        return iou, tprs, fprs, ovr
 
 
+    def image_reconstruction (self, y_valid, valid_flags, density_shape, patch_size, stride):
+        _,w = density_shape
+        reconstrunction = np.zeros((density_shape))
+        normalizator = np.zeros((density_shape))
+        
 
+        i=0; j=0
+        for idx in range (len(y_valid)):
+            if (valid_flags[idx]):
+                reconstrunction [j:j+patch_size, i:i+patch_size] += np.full ((patch_size,patch_size),y_valid[idx] )
+            else:
+                reconstrunction [j:j+patch_size, i:i+patch_size] += np.full ((1,patch_size),self.detector.normal_score ) 
+            normalizator [j:j+patch_size, i:i+patch_size] += np.ones((patch_size,patch_size))
+            if (i+patch_size < w):
+                i=i+stride
+            else:
+                i=0; j=j+stride
+        reconstrunction =  reconstrunction/normalizator
+
+        return reconstrunction
 
 
     ### Database Creation ###
@@ -146,7 +136,7 @@ class Model():
             else:
                 database = m.STSIM_M(patches, self.height, self.orientations)
                     
-            #Damn flag, move to another point!
+            #Damn flags
             for i in range(len(patches)):
                 flags[i] = check_preprocessing(patches[i])
 
@@ -156,7 +146,7 @@ class Model():
             args = [{'model': copy.deepcopy(m), 'patch_idx': idx, 'patch_value': copy.deepcopy(patches[idx]),
                         'height': self.height, 'orientations': self.orientations} for idx in range(len(patches))] 
 
-            with Pool(processes=5) as pool:  # multiprocessing.cpu_count()
+            with Pool(processes=5) as pool:
                 results = pool.map(extract_features, args, chunksize=1)
 
             for result in results:
@@ -182,52 +172,6 @@ class Model():
             return IForDetector (database)
 
         return None
-
-
-
-    ### Visualization ###
-    def model_visualize (self, valid_patches, density_shape, stride, patch_size, valid_gt, valid_img, alpha):
-        model_density = self.get_distance_density_from_model(valid_patches, density_shape, stride, patch_size, False)
-        self.detector.calculate_acceptances(alpha)
-        density = self.detector.get_density_tresholded(np.copy(model_density), False)
-        
-        iou , tpr, fpr = self.get_performance (valid_gt, density)
-        txt = "iou: " + str(iou) + "       tpr: " + str(tpr) + "       fpr: " + str(fpr)
-        
-        self.visualize_results (valid_img, density, txt)
-
-    def visualize_results (self,img, res, txt):
-        f = plt.figure(figsize=(12, 4))
-
-        f.add_subplot(1,2, 1)
-        plt.xticks([])
-        plt.yticks([])
-        plt.title("Image")
-        plt.imshow(img)
-
-        """
-        f.add_subplot(1,3, 2)
-        plt.xticks([])
-        plt.yticks([])
-        plt.title("Ground truth")
-        plt.imshow(gt)
-        """
-
-        f.add_subplot(1,2, 2)
-        plt.xticks([])
-        plt.yticks([])
-        plt.title("Density")
-        plt.imshow(res)
-
-        f.text(.5, .05, txt, ha='center')
-        plt.show()
-
-        """
-    def visualize_subbands (self, patches):
-        m = self.Metric()
-        for i in range(0,len(patches)):
-            m.visualize(patches[i], self.height, self.orientations)
-        """
 
 
 

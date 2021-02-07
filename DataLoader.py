@@ -12,6 +12,7 @@ def load_patches_from_file (file, patch_size, random, n_patches=3, stride=32, cu
 
     cropped = []
     if (random == True):
+        np.random.seed(523)
         for _ in range (n_patches):
             j = np.random.randint(0, im1.shape[0] - patch_size)
             i = np.random.randint(0, im1.shape[1] - patch_size)

@@ -37,7 +37,15 @@ def get_p_at_1 (distances, index, ref):
 
 
 if __name__ == "__main__":
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
+    y,x = np.ogrid[-16: 16, -16: 16]
+    mask = x**2+y**2 <= 150
+    mask = 1*mask.astype(float)
+    print(mask)
+    print (mask.shape)
 
+    """
     patches = load_patches('Dataset\\CUReT_Data', patch_size=128, n_patches=3, random=True, cut_size=(140,340,200,500), preprocess_limit=0)
 
     model = Model('stsim', None, height=5, orientations=5)
@@ -52,5 +60,5 @@ if __name__ == "__main__":
         corrects += get_p_at_1 (distances, index, int(index/3) * 3)
 
     print(corrects/database.shape[0])
-
+    """
 

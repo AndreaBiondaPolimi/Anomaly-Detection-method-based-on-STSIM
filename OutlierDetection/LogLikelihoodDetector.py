@@ -14,11 +14,14 @@ class LogLikelihoodDetector (MahalanobisDetector):
         super().calculate_acceptances(alpha)
 
     #this calculation is not a distance but a likelihood, for this reason I have to invert the result
-    def calculate_distance (self, f_valid):
-        k,_ = self.cov.shape
-        maha = super().calculate_distance(f_valid)
-        likelihood = -0.5 * (np.log(np.linalg.det(self.cov)) + maha + k * np.log(2 * np.pi))
-        return 1. / likelihood 
+    def calculate_distance (self, f_valids):
+        y_valid = []
+        for f_valid in f_valids:
+            k,_ = self.cov.shape
+            maha = super().calculate_distance(f_valid)
+            likelihood = -0.5 * (np.log(np.linalg.det(self.cov)) + maha + k * np.log(2 * np.pi))
+            y_valid.append(1. / likelihood ) 
+        return np.array(y_valid)
     
     def get_density_tresholded (self, density, binarize=True):
         return super().get_density_tresholded(density, binarize)    

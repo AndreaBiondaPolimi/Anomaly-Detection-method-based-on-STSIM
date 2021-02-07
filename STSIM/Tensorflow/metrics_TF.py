@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import itertools
-
+import matplotlib.pyplot as plt
 from STSIM.Tensorflow.SCFpyr_TF import SCFpyr_TF
 
 class Metric:
@@ -18,6 +18,25 @@ class Metric:
         )
         coeff = pyr.build(im_batch_tf)
 
+        """
+        higpass = coeff[0]
+        bandpass = coeff[1]
+        lowpass = coeff[2]
+        for i in range (5,6):
+            print(i)
+            plt.imshow(np.squeeze(im_batch_numpy[i]))
+            plt.show()
+
+            plt.imshow(np.real(higpass[i].numpy()))
+            plt.show()
+
+            for orient in bandpass:
+                plt.imshow(np.real(orient[i].numpy()) )
+                plt.show()
+        
+            plt.imshow(np.real(lowpass[i].numpy()))
+            plt.show()
+        """
 
         features = []
 
@@ -31,16 +50,16 @@ class Metric:
         # Extract correlation across orientations
         for orients in coeff[1:-1]:
             for (s1, s2) in list(itertools.combinations(orients, 2)):
-                s1 = tf.math.real(s1)
-                s2 = tf.math.real(s2)
+                s1 = tf.math.abs(s1)
+                s2 = tf.math.abs(s2)
                 #features.append(tf.reduce_mean(s1 * s2, axis = (1,2)))
                 features.append(tf.reduce_mean(s1 * s2, axis = (1,2)) / ((tf.math.reduce_std(s1, axis = (1,2)) * tf.math.reduce_std(s2, axis = (1,2))))) #(why not this?)
 
         # Extract correlation across heigth
         for orient in range(len(coeff[1])):
             for height in range(len(coeff) - 3):
-                s1 = tf.math.real(coeff[height + 1][orient])
-                s2 = tf.math.real(coeff[height + 2][orient])
+                s1 = tf.math.abs(coeff[height + 1][orient])
+                s2 = tf.math.abs(coeff[height + 2][orient])
 
                 new_shape = tf.dtypes.cast(tf.shape(s1)[1:3] / 2, tf.int32)
                 s1 = tf.image.resize(tf.expand_dims(s1, axis=-1), new_shape)
@@ -56,7 +75,7 @@ class Metric:
 
     def extract_basic(self,band, is_complex , features):
         if (is_complex):
-            band = tf.math.real(band)
+            band = tf.math.abs(band)
 
         shiftx = tf.roll(band, 1, axis = 1)
         shifty = tf.roll(band, 1, axis = 2)
