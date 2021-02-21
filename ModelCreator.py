@@ -63,7 +63,7 @@ class Model():
 
 
     ### Performance Evaluation ###
-    def model_evaluate (self, valid_patches, density_shape, stride, patch_size, valid_gt, valid_img, ovr_threshold, step):
+    def model_evaluate (self, valid_patches, density_shape, stride, patch_size, valid_gt, valid_img, ovr_threshold, step, to_show):
         tprs = []; fprs = []#; ious = []; ovrs = []    
         model_density = self.get_distance_density_from_model(valid_patches, density_shape, stride, patch_size)
 
@@ -89,8 +89,9 @@ class Model():
             print ("Auc: ", (-1 * integrate.trapz(np.array(tprs), np.array(fprs))))
 
             #Print residual & score map
-            #visualize_results(valid_img/255, density, "Residual Map")
-            #visualize_results(valid_gt, density_tresholded, "Score Map")
+            if (to_show):
+                visualize_results(valid_img/255, density, "Residual Map")
+                visualize_results(valid_gt, density_tresholded, "Score Map")
 
         return iou, tprs, fprs, ovr
 
