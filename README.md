@@ -1,6 +1,6 @@
 # Anomaly Detection based on STSIM as Feature Extraction
 ## Description
-This repository contains the Data-Driven approach of the Politecnico di Milano Master Thesis about Anomaly Detection: \title
+This repository contains the Model-Driven approach of the Politecnico di Milano Master Thesis about Anomaly Detection: \title
 
 ## Usage
 Execute the software 
