@@ -1,6 +1,6 @@
 # Anomaly Detection based on STSIM as Feature Extraction
 ## Description
-This repository contains the Model-Driven approach of the Politecnico di Milano Master Thesis about Anomaly Detection: \title
+This repository contains the Anomaly Detection method based on STSIM of the Andrea Bionda's Politecnico di Milano Master Thesis : \title
 
 ## Usage
 Execute the software 
