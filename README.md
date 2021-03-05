@@ -1,6 +1,6 @@
 # Anomaly Detection based on STSIM as Feature Extraction
 ## Description
-This repository contains the Anomaly Detection method based on STSIM of the Andrea Bionda's Politecnico di Milano Master Thesis : \title
+This repository contains the Anomaly Detection method based on STSIM of the Andrea Bionda's Politecnico di Milano Master Thesis : Pixelwise Anomaly Detection exploiting Steerable Filters based methods
 
 ## Usage
 Execute the software 
